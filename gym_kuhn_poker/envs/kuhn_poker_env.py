@@ -57,7 +57,7 @@ class KuhnPokerEnv(gym.Env):
         # Players that will face off in card comparison after betting ends
         self.elegible_players = [i for i in range(self.number_of_players)]
         return [self.observation_from_state(player_id=i)
-                for i in range(self.number_of_players)]
+                for i in range(self.number_of_players)], {}
 
     def step(self, action):
         assert 0 <= action <= len(ActionType), \
