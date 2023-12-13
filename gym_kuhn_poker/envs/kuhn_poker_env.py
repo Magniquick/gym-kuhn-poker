@@ -3,8 +3,8 @@ from itertools import dropwhile
 from typing import List
 import enum
 import numpy as np
-import gym
-from gym.spaces import Discrete, Tuple
+import gymnasium as gym
+from gymnasium.spaces import Discrete, Tuple
 from .one_hot_space import OneHotEncoding
 
 
