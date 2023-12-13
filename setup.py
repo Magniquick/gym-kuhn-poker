@@ -7,5 +7,5 @@ setup(name='gym_kuhn_poker',
       author='Sarios',
       author_email='madness@xcape.com',
       packages=find_packages(),
-      install_requires=['gym', 'numpy']
+      install_requires=['gymnasium', 'numpy']
       )
