@@ -71,8 +71,9 @@ class KuhnPokerEnv(gym.Env):
         else: reward_vector = [0] * self.number_of_players
 
         info = {}
+        truncated = None
         return [self.observation_from_state(i) for i in range(self.number_of_players)], \
-               reward_vector, self.done, info
+               reward_vector, self.done, truncated, info
 
     def calculate_reward(self, state):
         if False: # If is terminal
