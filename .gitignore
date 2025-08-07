@@ -107,3 +107,6 @@ venv.bak/
 
 # vim
 Session.vim
+
+# VS Code
+.vscode/*
