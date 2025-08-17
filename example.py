@@ -15,13 +15,16 @@ def play_random_game():
         env.render()        # prints last move + updated pots
         action = env.action_space.sample()
         obs, reward_vector, done, *_ = env.step(action)
+        print(f"current observation: {obs}")
+        print(f"current reward: {reward_vector}")
 
+    env.render()
     assert reward_vector is not None, "Reward vector should not be None"
     
     print("Game over!")
     print(f"Final payouts: {reward_vector}")
-    winner = reward_vector.index(max(reward_vector))
-    print(f"Winner is player {winner} (net {reward_vector[winner]} chips).")
+    winner = reward_vector
+    print(f"Winner is player {winner} (net {reward_vector} chips).")
 
     return winner, reward_vector, 
 
