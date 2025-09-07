@@ -11,18 +11,20 @@ from numpy.typing import NDArray
 
 field_dtype = np.int64
 
+
 class ObsDict(TypedDict):
     player_id: field_dtype
-    card: NDArray[field_dtype]            # shape: (deck_size,)
-    history_actions: NDArray[field_dtype] # shape: (max_actions, bins)
-    pots: NDArray[field_dtype]            # shape: (n_players,)
+    card: NDArray[field_dtype]  # shape: (deck_size,)
+    history_actions: NDArray[field_dtype]  # shape: (max_actions, bins)
+    pots: NDArray[field_dtype]  # shape: (n_players,)
+
 
 class ActionType(enum.IntEnum):
     PASS = 0  # check / call
     BET = 1  # bet / raise
 
 
-@dataclass
+@dataclass(slots=True)
 class GameConfig:
     n_players: int = 2
     deck_size: int = 3
@@ -43,7 +45,7 @@ class GameConfig:
         return self.n_players * self.betting_rounds
 
 
-@dataclass
+@dataclass(slots=True)
 class GameState:
     current_player: int
     hands: List[int]  # card index per player (0..deck_size-1)
@@ -63,7 +65,7 @@ class KuhnPokerEnv(gym.Env):
     Rewards are a vector (one per player) at terminal.
     """
 
-    metadata = {"render_modes": ["human"]}
+    metadata = {"render_modes": ["human"], "render_fps": 30}
 
     def __init__(self, number_of_players=2, deck_size=3, betting_rounds=2, ante=1):
         super().__init__()
@@ -185,12 +187,10 @@ class KuhnPokerEnv(gym.Env):
         return best_player
 
     def _rewards(self) -> List[int]:
-        # Winner takes total pot; others lose what they contributed.
         assert self.state is not None and self.state.done and self.state.winner is not None
         total = sum(self.state.pots)
-        rewards = [-c for c in self.state.pots]
-        rewards[self.state.winner] = total
-        return rewards
+        w = self.state.winner
+        return [(total - self.state.pots[i]) if i == w else -self.state.pots[i] for i in range(self.cfg.n_players)]
 
     def get_terminal_state(self):
         return self._rewards()
@@ -226,30 +226,39 @@ class KuhnPokerEnv(gym.Env):
         s = self.state
         pid = s.current_player
 
-        # Apply action
+        # Apply action to history
         s.history.append((pid, move))
 
-        if move == ActionType.BET:
-            if s.first_to_bet is None:
+        if s.first_to_bet is None:
+            # No live bet yet: PASS=check, BET=bet
+            if move == ActionType.PASS:
+                # check: no pot change, remain eligible for showdown
+                if pid not in s.eligible_players:
+                    s.eligible_players.append(pid)
+            else:  # move == ActionType.BET
+                # first bet: bettor pays 1, mark live bet, clear eligibles (we'll add responders)
                 s.first_to_bet = pid
-                s.eligible_players = []
-            s.eligible_players.append(pid)
-            s.pots[pid] += 1  # bettor pays 1
-
-        elif move == ActionType.PASS:
-            if s.first_to_bet is None:
-                # Check (no pot change)
+                s.eligible_players = [pid]  # bettor is eligible by definition
+                s.pots[pid] += 1  # bet costs 1
+        else:
+            # There is a live bet: PASS=fold, BET=call
+            if move == ActionType.PASS:
+                # fold: hand ends immediately, bettor wins without showdown
+                s.done = True
+                # winner is the first bettor (could also be last aggressor if you extend rounds)
+                s.winner = s.first_to_bet
+            else:  # move == ActionType.BET  -> CALL
+                s.pots[pid] += 1  # call pays 1 to match the bet
                 if pid not in s.eligible_players:
                     s.eligible_players.append(pid)
-            else:
-                # Call: match the bet
-                s.pots[pid] += 1
-                if pid not in s.eligible_players:
-                    s.eligible_players.append(pid)
 
-        # Advance turn then maybe finish
-        self._advance_player()
-        self._maybe_finish()
+        # If not already ended by a fold, advance & maybe finish by rule
+        if not s.done:
+            self._advance_player()
+            # End conditions:
+            # - all checked once (no bet occurred)
+            # - after first bet, once every *other* player has acted once, stop -> showdown
+            self._maybe_finish()
 
         # Rewards only at terminal
         terminated = s.done
@@ -257,10 +266,11 @@ class KuhnPokerEnv(gym.Env):
         truncated = False
         info = {"rewards": rewards}
 
-        # Observation for the next player to act (or arbitrary if terminal)
+        # Observation for the next player (or arbitrary at terminal)
         next_pid = s.current_player
         obs_next = self._build_obs_for(next_pid)
 
+        # Return scalar reward for the actor (pid), vector lives in info
         return obs_next, rewards[pid], terminated, truncated, info
 
     # ---------- Utils ----------
