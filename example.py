@@ -1,32 +1,39 @@
 from gym_kuhn_poker.envs.kuhn_poker_env import KuhnPokerEnv
 
-# def print(message: str):
-#     """Prints a message to the console."""
-#     #print(message)
 
 def play_random_game():
     env = KuhnPokerEnv(number_of_players=2, deck_size=3)
-    _, _ = env.reset()
-    reward_vector = None
-    done = False
+    obs, _ = env.reset()
+    final_rewards = None
+    terminated = False
+    truncated = False
+
     print("\n=== Playing moves ===")
 
-    while not done:
-        env.render()        # prints last move + updated pots
+    while not (terminated or truncated):
+        env.render()  # prints last move + updated pots
         action = env.action_space.sample()
-        obs, reward_vector, done, *_ = env.step(action)
-        print(f"current observation: {obs}")
-        print(f"current reward: {reward_vector}")
+
+        obs, reward_scalar, terminated, truncated, info = env.step(action)
+
+        print(f"Action taken: {action}")
+        print(f"Current observation: {obs}")
+        print(f"Scalar reward (for acting player): {reward_scalar}")
+        print(f"Reward vector so far: {info['rewards']}")
+
+        if terminated:
+            final_rewards = info["rewards"]
 
     env.render()
-    assert reward_vector is not None, "Reward vector should not be None"
-    
-    print("Game over!")
-    print(f"Final payouts: {reward_vector}")
-    winner = reward_vector
-    print(f"Winner is player {winner} (net {reward_vector} chips).")
+    assert final_rewards is not None, "Final reward vector should not be None"
 
-    return winner, reward_vector, 
+    print("Game over!")
+    print(f"Final payouts: {final_rewards}")
+    winner = final_rewards.index(max(final_rewards))
+    print(f"Winner is player {winner} (net {final_rewards[winner]} chips).")
+
+    return winner, final_rewards
+
 
 if __name__ == "__main__":
     play_random_game()

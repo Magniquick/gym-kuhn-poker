@@ -5,6 +5,7 @@ from gym_kuhn_poker.envs.kuhn_poker_env import KuhnPokerEnv, ActionType
 
 # ---------- Basic construction & spaces ----------
 
+
 def test_env_constructs_and_spaces_match():
     env = KuhnPokerEnv(number_of_players=2, deck_size=3, betting_rounds=2, ante=1)
     obs, info = env.reset(seed=123)
@@ -22,6 +23,7 @@ def test_env_constructs_and_spaces_match():
 
 # ---------- Deterministic dealing with seed ----------
 
+
 def test_reset_is_deterministic_with_seed():
     env = KuhnPokerEnv()
     obs1, _ = env.reset(seed=777)
@@ -36,6 +38,7 @@ def test_reset_is_deterministic_with_seed():
 
 
 # ---------- Observation correctness ----------
+
 
 def test_obs_card_one_hot_matches_internal_hand():
     env = KuhnPokerEnv()
@@ -103,6 +106,7 @@ def _assert_fold_terminal(env, last_scalar_reward, info, bettor_id):
 
 # ---------- Variant A: Direct bet → fold (no prior checks) ----------
 
+
 def test_p0_bet_then_p1_fold_immediate_end():
     env = KuhnPokerEnv()
     # cards irrelevant for fold; fix deal for determinism
@@ -117,7 +121,9 @@ def test_p0_bet_then_p1_fold_immediate_end():
     assert term is True and trunc is False
     _assert_fold_terminal(env, r1, info, bettor_id=0)
 
+
 # ---------- Variant B: Check → bet → fold ----------
+
 
 def test_p0_check_p1_bet_p0_fold():
     env = KuhnPokerEnv()
@@ -135,7 +141,9 @@ def test_p0_check_p1_bet_p0_fold():
     assert term is True and trunc is False
     _assert_fold_terminal(env, r0, info, bettor_id=1)
 
+
 # ---------- Errors & validation ----------
+
 
 def test_invalid_action_raises_value_error():
     env = KuhnPokerEnv()
